@@ -24,8 +24,11 @@ import numpy.linalg as linalg  # for linear algebra
 import scipy.spatial as sp  # for fast nearest neighbor search
 import numba as nb  # for numerical speed up
 from numba import jit  # for numerical speed up
+from numba.extending import overload, overload_method # for numerical speed up
 from numba.typed import Dict  # typing of dictionaries
 from statsmodels.stats.weightstats import DescrStatsW
+
+from .kdtree import KDTree
 
 JITKW = dict(nopython=True, cache=True, fastmath=True)
 JITPL = dict(parallel=False)
@@ -2716,8 +2719,9 @@ def kb2d_jit(
     # dp = list((y[i], x[i]) for i in range(0,nd))
     data_locs = np.column_stack((y, x))
     import scipy.spatial as sp
-    _tree = sp.cKDTree(data_locs, leafsize=16, compact_nodes=True,
-                       copy_data=False, balanced_tree=True)
+    # tree = sp.cKDTree(data_locs, leafsize=16, compact_nodes=True,
+    #                    copy_data=False, balanced_tree=True)
+    tree = KDTree(data_locs, leafsize=16)
 
     vario_int = Dict.empty(
         key_type=nb.types.unicode_type,
@@ -2738,18 +2742,18 @@ def kb2d_jit(
     for key in vario.keys():
         vario_int[key] = vario[key]
 
-    tree = Dict.empty(
-        key_type=nb.types.Tuple((nb.f8, nb.f8)),
-        value_type=nb.types.Tuple((nb.f8[:], nb.i4[:]))
-    )
+    # tree = Dict.empty(
+    #     key_type=nb.types.Tuple((nb.f8, nb.f8)),
+    #     value_type=nb.types.Tuple((nb.f8[:], nb.i4[:]))
+    # )
 
-    for iy in range(0, ny):
-        yloc = ymn + (iy-0)*ysiz
-        for ix in range(0, nx):
-            xloc = xmn + (ix-0)*xsiz
-            current_node = (yloc, xloc)
-            tree[current_node] = _tree.query(
-                current_node, ndmax, distance_upper_bound=radius)
+    # for iy in range(0, ny):
+    #     yloc = ymn + (iy-0)*ysiz
+    #     for ix in range(0, nx):
+    #         xloc = xmn + (ix-0)*xsiz
+    #         current_node = (yloc, xloc)
+    #         tree[current_node] = _tree.query(
+    #             current_node, ndmax, distance_upper_bound=radius)
 
     kmap, vmap = _kb2d_jit(
         tree, nd, x, y, vr,
@@ -2757,6 +2761,18 @@ def kb2d_jit(
         ndmax, radius, ktype, skmean, vario_int, vario_float)
 
     return kmap, vmap
+
+
+# def query_tree(tree: sp.cKDTree, x: np.ndarray, k: int, distance_upper_bound: float):
+#     return tree.query(x, k, distance_upper_bound=distance_upper_bound)
+
+# @overload(query_tree)
+# def _query_tree(tree: sp.cKDTree, x: np.ndarray, k: int, distance_upper_bound: float):
+#     if isinstance(tree, sp.cKDTree):
+#         dist, nums = tree.query(x, k, distance_upper_bound=distance_upper_bound)
+#         def _query_tree(tree, x, k, distance_upper_bound):
+#             return dist, nums
+#         return query_impl
 
 
 @jit(**JITKW)  # numba crashed on parallel=True
@@ -2882,10 +2898,11 @@ def _kb2d_jit(
 # Find the nearest samples within each octant: First initialize
 # the counter arrays:
             na = -1   # accounting for 0 as first index
-#             dist.fill(1.0e+20)
-#             nums.fill(-1)
-            # dist, nums = tree.query(current_node,ndmax, distance_upper_bound=radius) # use kd tree for fast nearest data search
-            dist, nums = tree[current_node]
+            # dist.fill(1.0e+20)
+            # nums.fill(-1)
+            dist, nums = tree.query(current_node, k=ndmax, distance_upper_bound=radius) # use kd tree for fast nearest data search
+            # dist, nums = query_tree(tree=tree, x=current_node, k=ndmax, distance_upper_bound=radius) # use kd tree for fast nearest data search
+            # dist, nums = tree[current_node]
             # remove any data outside search radius
             nums = nums[dist < radius]
             dist = dist[dist < radius]
