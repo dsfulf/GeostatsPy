@@ -21,18 +21,41 @@ Mac users with missing DLL issues at that same location above.
 import os  # for setting working directory and running fortran executables
 import random as rand  # for random numbers
 
-import matplotlib
-import matplotlib.pyplot as plt  # for plotting
+from typing import List, Tuple, Dict, Union
+
+import matplotlib as mpl  # type: ignore
+import matplotlib.pyplot as plt  # type: ignore # for plotting
 import numpy as np  # for ndarrays
-import pandas as pd  # for DataFrames
-from scipy import signal
+import pandas as pd  # type: ignore # for DataFrames
+from scipy import signal  # type: ignore
 
 # Hard coded image file output
 image_type = "tif"
 dpi = 600
 
 
-def ndarray2GSLIB(array, data_file, col_name):
+def fix_step(xmin: float, xmax: float, ymin: float, ymax: float, xstep: float, ystep: float
+             ) -> Tuple[float, float]:
+    """
+    Correct numerical errors causing the implied number of grid steps to be a non-int.
+
+    :param xmin: x axis minimum
+    :param xmax: x axis maximum
+    :param ymin: y axis minimum
+    :param ymax: y axis maximum
+    :param xstep: xstep
+    :param ystep: ystep
+    """
+    dx = xmax - xmin
+    nx = int(round(dx / xstep, 0))
+
+    dy = ymax - ymin
+    ny = int(round(dy / ystep, 0))
+
+    return nx, ny
+
+
+def ndarray2GSLIB(array: np.ndarray, data_file: str, col_name: str) -> None:
     """Convert 1D or 2D numpy ndarray to a GSLIB Geo-EAS file for use with
     GSLIB methods.
 
@@ -41,7 +64,6 @@ def ndarray2GSLIB(array, data_file, col_name):
     :param col_name: column name
     :return: None
     """
-
     if array.ndim not in [1, 2]:
         raise ValueError("must use a 2D array")
 
@@ -63,7 +85,7 @@ def ndarray2GSLIB(array, data_file, col_name):
                 f.write(str(array[ix]) + "\n")
 
 
-def GSLIB2ndarray(data_file, kcol, nx, ny):
+def GSLIB2ndarray(data_file: str, kcol: int, nx: int, ny: int) -> Tuple[np.ndarray, str]:
     """Convert GSLIB Geo-EAS file to a 1D or 2D numpy ndarray for use with
     Python methods
 
@@ -73,6 +95,7 @@ def GSLIB2ndarray(data_file, kcol, nx, ny):
     :param ny: shape along y dimension
     :return: ndarray, column name
     """
+    head: Union[str, List[str]]
     if ny > 1:
         array = np.ndarray(shape=(ny, nx), dtype=float, order="F")
     else:
@@ -99,7 +122,7 @@ def GSLIB2ndarray(data_file, kcol, nx, ny):
     return array, col_name
 
 
-def Dataframe2GSLIB(data_file, df):
+def Dataframe2GSLIB(data_file: str, df: pd.DataFrame) -> None:
     """Convert pandas DataFrame to a GSLIB Geo-EAS file for use with GSLIB
     methods.
 
@@ -107,6 +130,7 @@ def Dataframe2GSLIB(data_file, df):
     :param df: dataframe
     :return: None
     """
+    head: Union[str, List[str]]
     ncol = len(df.columns)
     nrow = len(df.index)
 
@@ -122,15 +146,16 @@ def Dataframe2GSLIB(data_file, df):
             f.write("\n")
 
 
-def GSLIB2Dataframe(data_file):
+def GSLIB2Dataframe(data_file: str) -> pd.DataFrame:
     """Convert GSLIB Geo-EAS files to a pandas DataFrame for use with Python
     methods.
 
     :param data_file: dataframe
     :return: None
     """
+    head: Union[str, List[str]]
+    columns: List[str] = []
 
-    columns = []
     with open(data_file) as f:
         head = [next(f) for _ in range(2)]  # read first two lines
         line2 = head[1].split()
@@ -146,7 +171,18 @@ def GSLIB2Dataframe(data_file):
         return df
 
 
-def hist(array, xmin, xmax, log, cumul, bins, weights, xlabel, title, fig_name):
+def hist(
+    array: np.ndarray,
+    xmin: float,
+    xmax: float,
+    log: bool,
+    cumul: bool,
+    bins: int,
+    weights: np.ndarray,
+    xlabel: str,
+    title: str,
+    fig_name: str
+) -> None:
     """Histogram, reimplemented in Python of GSLIB hist with Matplotlib methods,
     displayed and as image file.
 
@@ -182,7 +218,17 @@ def hist(array, xmin, xmax, log, cumul, bins, weights, xlabel, title, fig_name):
     plt.show()
 
 
-def hist_st(array, xmin, xmax, log, cumul, bins, weights, xlabel, title):
+def hist_st(
+    array: np.ndarray,
+    xmin: float,
+    xmax: float,
+    log: bool,
+    cumul: bool,
+    bins: int,
+    weights: np.ndarray,
+    xlabel: str,
+    title: str
+) -> None:
     """Histogram, reimplemented in Python of GSLIB hist with Matplotlib methods
     (version for subplots).
 
@@ -215,23 +261,23 @@ def hist_st(array, xmin, xmax, log, cumul, bins, weights, xlabel, title):
 
 
 def locmap(
-    df,
-    xcol,
-    ycol,
-    vcol,
-    xmin,
-    xmax,
-    ymin,
-    ymax,
-    vmin,
-    vmax,
-    title,
-    xlabel,
-    ylabel,
-    vlabel,
-    cmap,
-    fig_name,
-):
+    df: pd.DataFrame,
+    xcol: float,
+    ycol: float,
+    vcol: float,
+    xmin: float,
+    xmax: float,
+    ymin: float,
+    ymax: float,
+    vmin: float,
+    vmax: float,
+    title: str,
+    xlabel: str,
+    ylabel: str,
+    vlabel: str,
+    cmap: mpl.colors.ListedColormap,
+    fig_name: str
+) -> plt.Figure:
     """Location map, reimplementation in Python of GSLIB locmap with Matplotlib
     methods.
 
@@ -284,22 +330,22 @@ def locmap(
 
 
 def locmap_st(
-    df,
-    xcol,
-    ycol,
-    vcol,
-    xmin,
-    xmax,
-    ymin,
-    ymax,
-    vmin,
-    vmax,
-    title,
-    xlabel,
-    ylabel,
-    vlabel,
-    cmap,
-):
+    df: pd.DataFrame,
+    xcol: float,
+    ycol: float,
+    vcol: float,
+    xmin: float,
+    xmax: float,
+    ymin: float,
+    ymax: float,
+    vmin: float,
+    vmax: float,
+    title: str,
+    xlabel: str,
+    ylabel: str,
+    vlabel: str,
+    cmap: mpl.colors.ListedColormap
+) -> plt.Figure:
     """Location map, reimplementation in Python of GSLIB locmap with Matplotlib
     methods (version for subplots).
 
@@ -348,21 +394,22 @@ def locmap_st(
 
 
 def pixelplt(
-    array,
-    xmin,
-    xmax,
-    ymin,
-    ymax,
-    step,
-    vmin,
-    vmax,
-    title,
-    xlabel,
-    ylabel,
-    vlabel,
-    cmap,
-    fig_name,
-):
+    array: np.ndarray,
+    xmin: float,
+    xmax: float,
+    ymin: float,
+    ymax: float,
+    xstep: float,
+    ystep: float,
+    vmin: float,
+    vmax: float,
+    title: str,
+    xlabel: str,
+    ylabel: str,
+    vlabel: str,
+    cmap: mpl.colors.ListedColormap,
+    fig_name: str
+) -> plt.Figure:
     """Pixel plot, reimplementation in Python of GSLIB pixelplt with Matplotlib
     methods.
 
@@ -371,7 +418,8 @@ def pixelplt(
     :param xmax: x axis maximum
     :param ymin: y axis minimum
     :param ymax: y axis maximum
-    :param step: step
+    :param xstep: xstep
+    :param ystep: ystep
     :param vmin: TODO
     :param vmax: TODO
     :param title: title
@@ -383,7 +431,7 @@ def pixelplt(
     :return: QuadContourSet
     """
     xx, yy = np.meshgrid(
-        np.arange(xmin, xmax, step), np.arange(ymax, ymin, -1 * step)
+        np.arange(xmin, xmax, xstep), np.arange(ymax, ymin, -1 * ystep)
     )
     plt.figure(figsize=(8, 6))
     im = plt.contourf(
@@ -408,20 +456,21 @@ def pixelplt(
 
 
 def pixelplt_st(
-    array,
-    xmin,
-    xmax,
-    ymin,
-    ymax,
-    step,
-    vmin,
-    vmax,
-    title,
-    xlabel,
-    ylabel,
-    vlabel,
-    cmap,
-):
+    array: np.ndarray,
+    xmin: float,
+    xmax: float,
+    ymin: float,
+    ymax: float,
+    xstep: float,
+    ystep: float,
+    vmin: float,
+    vmax: float,
+    title: str,
+    xlabel: str,
+    ylabel: str,
+    vlabel: str,
+    cmap: mpl.colors.ListedColormap
+) -> plt.Figure:
     """Pixel plot, reimplementation in Python of GSLIB pixelplt with Matplotlib
     methods (version for subplots).
 
@@ -430,7 +479,8 @@ def pixelplt_st(
     :param xmax: x axis maximum
     :param ymin: y axis minimum
     :param ymax: y axis maximum
-    :param step: step
+    :param xstep: xstep
+    :param ystep: ystep
     :param vmin: TODO
     :param vmax: TODO
     :param title: title
@@ -441,14 +491,14 @@ def pixelplt_st(
     :return: QuadContourSet
     """
     xx, yy = np.meshgrid(
-        np.arange(xmin, xmax, step), np.arange(ymax, ymin, -1 * step)
+        np.arange(xmin, xmax, xstep), np.arange(ymax, ymin, -1 * ystep)
     )
 
     # Use dummy since scatter plot controls legend min and max appropriately
     # and contour does not!
-    x = []
-    y = []
-    v = []
+    x: List[None] = []
+    y: List[None] = []
+    v: List[None] = []
 
     cs = plt.contourf(
         xx,
@@ -483,20 +533,21 @@ def pixelplt_st(
 
 
 def pixelplt_log_st(
-    array,
-    xmin,
-    xmax,
-    ymin,
-    ymax,
-    step,
-    vmin,
-    vmax,
-    title,
-    xlabel,
-    ylabel,
-    vlabel,
-    cmap,
-):
+    array: np.ndarray,
+    xmin: float,
+    xmax: float,
+    ymin: float,
+    ymax: float,
+    xstep: float,
+    ystep: float,
+    vmin: float,
+    vmax: float,
+    title: str,
+    xlabel: str,
+    ylabel: str,
+    vlabel: str,
+    cmap: mpl.colors.ListedColormap
+) -> plt.Figure:
     """Pixel plot, reimplementation in Python of GSLIB pixelplt with Matplotlib
     methods (version for subplots, log scale).
 
@@ -505,7 +556,8 @@ def pixelplt_log_st(
     :param xmax: x axis maximum
     :param ymin: y axis minimum
     :param ymax: y axis maximum
-    :param step: step
+    :param xstep: xstep
+    :param ystep: ystep
     :param vmin: TODO
     :param vmax: TODO
     :param title: title
@@ -515,17 +567,18 @@ def pixelplt_log_st(
     :param cmap: colormap
     :return: QuadContourSet
     """
+    nx, ny = fix_step(xmin, xmax, ymin, ymax, xstep, ystep)
     xx, yy = np.meshgrid(
-        np.arange(xmin, xmax, step), np.arange(ymax, ymin, -1 * step)
+        np.arange(xmin, xmax, xstep), np.arange(ymax, ymin, -1 * ystep)
     )
 
     # Use dummy since scatter plot controls legend min and max appropriately
     # and contour does not!
-    x = []
-    y = []
-    v = []
+    x: List[None] = []
+    y: List[None] = []
+    v: List[None] = []
 
-    color_int = np.r_[np.log(vmin): np.log(vmax): 0.5]
+    color_int = np.arange(np.log(vmin), np.log(vmax), 0.5)
     color_int = np.exp(color_int)
     cs = plt.contourf(
         xx,
@@ -535,7 +588,7 @@ def pixelplt_log_st(
         vmin=vmin,
         vmax=vmax,
         levels=color_int,
-        norm=matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax),
+        norm=mpl.colors.LogNorm(vmin=vmin, vmax=vmax),
     )
     im = plt.scatter(
         x,
@@ -550,7 +603,7 @@ def pixelplt_log_st(
         linewidths=0.8,
         verts=None,
         edgecolors="black",
-        norm=matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax),
+        norm=mpl.colors.LogNorm(vmin=vmin, vmax=vmax),
     )
     plt.title(title)
     plt.xlabel(xlabel)
@@ -561,25 +614,26 @@ def pixelplt_log_st(
 
 
 def locpix(
-    array,
-    xmin,
-    xmax,
-    ymin,
-    ymax,
-    step,
-    vmin,
-    vmax,
-    df,
-    xcol,
-    ycol,
-    vcol,
-    title,
-    xlabel,
-    ylabel,
-    vlabel,
-    cmap,
-    fig_name,
-):
+    array: np.ndarray,
+    xmin: float,
+    xmax: float,
+    ymin: float,
+    ymax: float,
+    xstep: float,
+    ystep: float,
+    vmin: float,
+    vmax: float,
+    df: pd.DataFrame,
+    xcol: str,
+    ycol: str,
+    vcol: str,
+    title: str,
+    xlabel: str,
+    ylabel: str,
+    vlabel: str,
+    cmap: mpl.colors.ListedColormap,
+    fig_name: str,
+) -> plt.Figure:
     """Pixel plot and location map, reimplementation in Python of a GSLIB MOD
     with Matplotlib methods.
 
@@ -588,7 +642,8 @@ def locpix(
     :param xmax: x axis maximum
     :param ymin: y axis minimum
     :param ymax: y axis maximum
-    :param step: step
+    :param xstep: xstep
+    :param ystep: ystep
     :param vmin: TODO
     :param vmax: TODO
     :param df: dataframe
@@ -603,8 +658,9 @@ def locpix(
     :param fig_name: figure name
     :return: QuadContourSet
     """
+    nx, ny = fix_step(xmin, xmax, ymin, ymax, xstep, ystep)
     xx, yy = np.meshgrid(
-        np.arange(xmin, xmax, step), np.arange(ymax, ymin, -1 * step)
+        np.arange(xmin, xmax, xstep), np.arange(ymax, ymin, -1 * ystep)
     )
 
     plt.figure(figsize=(8, 6))
@@ -644,24 +700,25 @@ def locpix(
 
 
 def locpix_st(
-    array,
-    xmin,
-    xmax,
-    ymin,
-    ymax,
-    step,
-    vmin,
-    vmax,
-    df,
-    xcol,
-    ycol,
-    vcol,
-    title,
-    xlabel,
-    ylabel,
-    vlabel,
-    cmap,
-):
+    array: np.ndarray,
+    xmin: float,
+    xmax: float,
+    ymin: float,
+    ymax: float,
+    xstep: float,
+    ystep: float,
+    vmin: float,
+    vmax: float,
+    df: pd.DataFrame,
+    xcol: str,
+    ycol: str,
+    vcol: str,
+    title: str,
+    xlabel: str,
+    ylabel: str,
+    vlabel: str,
+    cmap: mpl.colors.ListedColormap,
+) -> plt.Figure:
     """Pixel plot and location map, reimplementation in Python of a GSLIB MOD
     with Matplotlib methods (version for subplots).
 
@@ -670,7 +727,8 @@ def locpix_st(
     :param xmax: x axis maximum
     :param ymin: y axis minimum
     :param ymax: y axis maximum
-    :param step: step
+    :param xstep: xstep
+    :param ystep: ystep
     :param vmin: TODO
     :param vmax: TODO
     :param df: dataframe
@@ -684,8 +742,10 @@ def locpix_st(
     :param cmap: colormap
     :return: QuadContourSet
     """
+    nx, ny = fix_step(xmin, xmax, ymin, ymax, xstep, ystep)
     xx, yy = np.meshgrid(
-        np.arange(xmin, xmax, step), np.arange(ymax, ymin, -1 * step)
+        # np.arange(xmin, xmax, xstep), np.arange(ymax, ymin, -1 * ystep)
+        np.linspace(xmin, xmax, nx + 1)[:-1], np.linspace(ymax, ymin, ny + 1)[:-1]
     )
 
     cs = plt.contourf(
@@ -722,24 +782,25 @@ def locpix_st(
 
 
 def locpix_log_st(
-    array,
-    xmin,
-    xmax,
-    ymin,
-    ymax,
-    step,
-    vmin,
-    vmax,
-    df,
-    xcol,
-    ycol,
-    vcol,
-    title,
-    xlabel,
-    ylabel,
-    vlabel,
-    cmap,
-):
+    array: np.ndarray,
+    xmin: float,
+    xmax: float,
+    ymin: float,
+    ymax: float,
+    xstep: float,
+    ystep: float,
+    vmin: float,
+    vmax: float,
+    df: pd.DataFrame,
+    xcol: str,
+    ycol: str,
+    vcol: str,
+    title: str,
+    xlabel: str,
+    ylabel: str,
+    vlabel: str,
+    cmap: mpl.colors.ListedColormap,
+) -> plt.Figure:
     """Pixel plot and location map, reimplementation in Python of a GSLIB MOD
     with Matplotlib methods (version for subplots, log scale).
 
@@ -748,7 +809,8 @@ def locpix_log_st(
     :param xmax: x axis maximum
     :param ymin: y axis minimum
     :param ymax: y axis maximum
-    :param step: step
+    :param xstep: xstep
+    :param ystep: ystep
     :param vmin: TODO
     :param vmax: TODO
     :param df: dataframe
@@ -762,11 +824,12 @@ def locpix_log_st(
     :param cmap: colormap
     :return: QuadContourSet
     """
+    nx, ny = fix_step(xmin, xmax, ymin, ymax, xstep, ystep)
     xx, yy = np.meshgrid(
-        np.arange(xmin, xmax, step), np.arange(ymax, ymin, -1 * step)
+        np.arange(xmin, xmax, xstep), np.arange(ymax, ymin, -1 * ystep)
     )
 
-    color_int = np.r_[np.log(vmin): np.log(vmax): 0.5]
+    color_int = np.arange(np.log(vmin), np.log(vmax), 0.5)
     color_int = np.exp(color_int)
     cs = plt.contourf(
         xx,
@@ -776,7 +839,7 @@ def locpix_log_st(
         vmin=vmin,
         vmax=vmax,
         levels=color_int,
-        norm=matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax),
+        norm=mpl.colors.LogNorm(vmin=vmin, vmax=vmax),
     )
     plt.scatter(
         df[xcol],
@@ -791,7 +854,7 @@ def locpix_log_st(
         linewidths=0.8,
         verts=None,
         edgecolors="black",
-        norm=matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax),
+        norm=mpl.colors.LogNorm(vmin=vmin, vmax=vmax),
     )
     plt.title(title)
     plt.xlabel(xlabel)
@@ -803,7 +866,7 @@ def locpix_log_st(
     return cs
 
 
-def affine(array, tmean, tstdev):
+def affine(array: np.ndarray, tmean: float, tstdev: float) -> np.ndarray:
     """Affine distribution correction reimplemented in Python with numpy
     methods.
 
@@ -818,7 +881,7 @@ def affine(array, tmean, tstdev):
     return array
 
 
-def nscore(x):
+def nscore(x: np.ndarray) -> np.ndarray:
     """Normal score transform, wrapper for nscore from GSLIB (.exe must be
     available in PATH or working directory).
 
@@ -849,19 +912,19 @@ def nscore(x):
 
 
 def make_variogram(
-    nug,
-    nst,
-    it1,
-    cc1,
-    azi1,
-    hmaj1,
-    hmin1,
-    it2=1,
-    cc2=0,
-    azi2=0,
-    hmaj2=0,
-    hmin2=0,
-):
+    nug: float,
+    nst: int,
+    it1: int,
+    cc1: int,
+    azi1: float,
+    hmaj1: float,
+    hmin1: float,
+    it2: int = 1,
+    cc2: int = 0,
+    azi2: float = 0,
+    hmaj2: float = 0,
+    hmin2: float = 0,
+) -> plt.Figure:
     """Make a dictionary of variogram parameters for application with spatial
     estimation and simulation.
 
@@ -977,7 +1040,8 @@ def gamv_2d(df, xcol, ycol, vcol, nlag, lagdist, azi, atol, bstand):
 
     return lag, gamma, npair
 
-def gamv_3d(df, xcol, ycol, zcol, vcol, nlag, lagdist,lag_tol, azi, atol, bandh, dip, dtol, bandv, isill):
+
+def gamv_3d(df, xcol, ycol, zcol, vcol, nlag, lagdist, lag_tol, azi, atol, bandh, dip, dtol, bandv, isill):
     """Irregularly sampled variogram, 3D wrapper for gam from GSLIB (.exe must
     be available in PATH or working directory).
 
@@ -997,7 +1061,8 @@ def gamv_3d(df, xcol, ycol, zcol, vcol, nlag, lagdist,lag_tol, azi, atol, bandh,
     gamma = []
     npair = []
 
-    df_ext = pd.DataFrame({"X": df[xcol], "Y": df[ycol], "Z": df[zcol],"Variable": df[vcol]})
+    df_ext = pd.DataFrame(
+        {"X": df[xcol], "Y": df[ycol], "Z": df[zcol], "Variable": df[vcol]})
     Dataframe2GSLIB("gamv_out.dat", df_ext)
 
     with open("gamv.par", "w") as f:
@@ -1014,7 +1079,7 @@ def gamv_3d(df, xcol, ycol, zcol, vcol, nlag, lagdist,lag_tol, azi, atol, bandh,
         f.write(str(lagdist) + "                       -lag separation distance                 \n")
         f.write(str(lag_tol) + "                   -lag tolerance                           \n")
         f.write("1                                 -number of directions                    \n")
-        f.write(str(azi) + " " + str(atol) + " " + str(bandh) + " " +str(dip) + " " + str(dtol) + " " + str(bandv)+ "  -azm,atol,bandh,dip,dtol,bandv \n")
+        f.write(str(azi) + " " + str(atol) + " " + str(bandh) + " " + str(dip) + " " + str(dtol) + " " + str(bandv) + "  -azm,atol,bandh,dip,dtol,bandv \n")
         f.write(str(isill) + "                    -standardize sills? (0=no, 1=yes)        \n")
         f.write("1                                 -number of variograms                    \n")
         f.write("1   1   1                         -tail var., head var., variogram type    \n")
@@ -1032,8 +1097,9 @@ def gamv_3d(df, xcol, ycol, zcol, vcol, nlag, lagdist,lag_tol, azi, atol, bandh,
 
     return lag, gamma, npair
 
+
 def varmapv_2d(
-    df,
+    df: pd.DataFrame,
     xcol,
     ycol,
     vcol,
@@ -1046,8 +1112,8 @@ def varmapv_2d(
     title,
     vlabel,
     cmap,
-    fig_name,
-):
+    fig_name: str,
+) -> np.ndarray:
     """Irregular spaced data, 2D wrapper for varmap from GSLIB (.exe must be
     available in PATH or working directory).
 
@@ -1068,7 +1134,7 @@ def varmapv_2d(
     :return: TODO
     """
     df_ext = pd.DataFrame(
-        {"X": df[xcol], "Y": df[ycol], "Z": df[vcol]} # TODO unknown function
+        {"X": df[xcol], "Y": df[ycol], "Z": df[vcol]}  # TODO unknown function
     )
     Dataframe2GSLIB("varmap_out.dat", df_ext)
 
@@ -1101,12 +1167,14 @@ def varmapv_2d(
     xmin = -1 * xmax
     ymax = (float(ny) + 0.5) * lagdist
     ymin = -1 * ymax
+
     pixelplt(
         varmap_,
         xmin,
         xmax,
         ymin,
         ymax,
+        lagdist,
         lagdist,
         0,
         vmax,
@@ -1117,6 +1185,7 @@ def varmapv_2d(
         cmap,
         fig_name
     )
+
     return varmap_
 
 
@@ -1133,8 +1202,8 @@ def varmap(
     title,
     vlabel,
     cmap,
-    fig_name,
-):
+    fig_name: str,
+) -> np.ndarray:
     """Regular spaced data, 2D wrapper for varmap from GSLIB (.exe must be
     available in PATH or working directory).
 
@@ -1184,12 +1253,14 @@ def varmap(
     xmin = -1 * xmax
     ymax = (float(nlagy) + 0.5) * hsiz
     ymin = -1 * ymax
+
     pixelplt(
         varmap_,
         xmin,
         xmax,
         ymin,
         ymax,
+        hsiz,
         hsiz,
         0,
         vmax,
@@ -1200,6 +1271,7 @@ def varmap(
         cmap,
         fig_name
     )
+
     return varmap_
 
 
@@ -1219,7 +1291,7 @@ def vmodel(
     azi2=0,
     rmaj2=0,
     rmin2=0,
-):
+) -> Tuple[List[float], List[float]]:
     """Variogram model, 2D wrapper for vmodel from GSLIB (.exe must be
     available in PATH or working directory).
 
@@ -1240,8 +1312,8 @@ def vmodel(
     :param rmin2: TODO
     :return: TODO
     """
-    lag = []
-    gamma = []
+    lag: List[float] = []
+    gamma: List[float] = []
 
     with open("vmodel.par", "w") as f:
         f.write("                                                                           \n")
@@ -1271,7 +1343,7 @@ def vmodel(
     return lag, gamma
 
 
-def declus(df, xcol, ycol, vcol, cmin, cmax, cnum, bmin):
+def declus(df, xcol, ycol, vcol, cmin, cmax, cnum, bmin) -> List[float]:
     """Cell-based declustering, 2D wrapper for declus from GSLIB (.exe must be
     available in PATH or working directory).
 
@@ -1325,7 +1397,7 @@ def declus(df, xcol, ycol, vcol, cmin, cmax, cnum, bmin):
     return weights
 
 
-def sgsim_uncond(nreal, nx, ny, hsiz, seed, var, output_file):
+def sgsim_uncond(nreal, nx, ny, hsiz, seed, var, output_file) -> np.ndarray:
     """Sequential Gaussian simulation, 2D unconditional wrapper for sgsim from
     GSLIB (.exe must be available in PATH or working directory).
 
@@ -1400,7 +1472,7 @@ def sgsim_uncond(nreal, nx, ny, hsiz, seed, var, output_file):
     return sim_array[0]
 
 
-def kb2d(df, xcol, ycol, vcol, nx, ny, hsiz, var, output_file):
+def kb2d(df, xcol, ycol, vcol, nx, ny, hsiz, var, output_file) -> Tuple[np.ndarray, np.ndarray]:
     """Kriging estimation, 2D wrapper for kb2d from GSLIB (.exe must be
     available in PATH or working directory).
 
@@ -1460,23 +1532,23 @@ def kb2d(df, xcol, ycol, vcol, nx, ny, hsiz, var, output_file):
     return est_array[0], var_array[0]
 
 
-def sgsim(nreal, df, xcol, ycol, vcol, nx, ny, hsiz, seed, var, output_file):
+def sgsim(nreal, df, xcol, ycol, vcol, nx, ny, hsiz, seed, var, output_file) -> np.ndarray:
     """Sequential Gaussian simulation, 2D wrapper for sgsim from GSLIB (.exe
-    must be available in PATH or working directory).
+       must be available in PATH or working directory).
 
-    :param nreal: TODO
-    :param df: dataframe
-    :param xcol: TODO
-    :param ycol: TODO
-    :param vcol: TODO
-    :param nx: TODO
-    :param ny: TODO
-    :param hsiz: TODO
-    :param seed: TODO
-    :param var: TODO
-    :param output_file: output file
-    :return: TODO
-    """
+       :param nreal: TODO
+       :param df: dataframe
+       :param xcol: TODO
+       :param ycol: TODO
+       :param vcol: TODO
+       :param nx: TODO
+       :param ny: TODO
+       :param hsiz: TODO
+       :param seed: TODO
+       :param var: TODO
+       :param output_file: output file
+       :return: TODO
+       """
     x = df[xcol]
     y = df[ycol]
     v = df[vcol]
@@ -1542,26 +1614,26 @@ def sgsim(nreal, df, xcol, ycol, vcol, nx, ny, hsiz, seed, var, output_file):
         f.write(str(it2) + " " + str(cc2) + " " + str(azi2) + " 0.0 0.0 -it,cc,ang1,ang2,ang3\n")
         f.write(" " + str(hmaj2) + " " + str(hmin2) + " 1.0 - a_hmax, a_hmin, a_vert        \n")
 
-    os.system("sgsim.exe sgsim.par")
-    sim_array = GSLIB2ndarray(output_file, 0, nx, ny)
-    return sim_array[0]
+        os.system("sgsim.exe sgsim.par")
+        sim_array = GSLIB2ndarray(output_file, 0, nx, ny)
+        return sim_array[0]
 
 
-def cosgsim_uncond(nreal, nx, ny, hsiz, seed, var, sec, correl, output_file):
+def cosgsim_uncond(nreal, nx, ny, hsiz, seed, var, sec, correl, output_file) -> np.ndarray:
     """Sequential Gaussian simulation, 2D unconditional wrapper for sgsim from
-    GSLIB (.exe must be available in PATH or working directory).
+       GSLIB (.exe must be available in PATH or working directory).
 
-    :param nreal: TODO
-    :param nx: TODO
-    :param ny: TODO
-    :param hsiz: TODO
-    :param seed: TODO
-    :param var: TODO
-    :param sec: TODO
-    :param correl: TODO
-    :param output_file: output file
-    :return: TODO
-    """
+       :param nreal: TODO
+       :param nx: TODO
+       :param ny: TODO
+       :param hsiz: TODO
+       :param seed: TODO
+       :param var: TODO
+       :param sec: TODO
+       :param correl: TODO
+       :param output_file: output file
+       :return: TODO
+       """
     nug = var["nug"]
     nst = var["nst"]
     it1 = var["it1"]
@@ -1622,18 +1694,29 @@ def cosgsim_uncond(nreal, nx, ny, hsiz, seed, var, sec, correl, output_file):
         f.write(str(it2) + " " + str(cc2) + " " + str(azi2) + " 0.0 0.0 -it,cc,ang1,ang2,ang3 \n")
         f.write(" " + str(hmaj2) + " " + str(hmin2) + " 1.0 - a_hmax, a_hmin, a_vert        \n")
 
-    os.system("sgsim.exe sgsim.par")
-    sim_array = GSLIB2ndarray(output_file, 0, nx, ny)
-    return sim_array[0]
+        os.system("sgsim.exe sgsim.par")
+        sim_array = GSLIB2ndarray(output_file, 0, nx, ny)
+        return sim_array[0]
 
 
-def sample(array, xmin, ymin, step, name, df, xcol, ycol):
+def sample(
+    array: np.ndarray,
+    xmin: float,
+    ymin: float,
+    xstep: float,
+    ystep: float,
+    name: str,
+    df: pd.DataFrame,
+    xcol: str,
+    ycol: str
+) -> pd.DataFrame:
     """Sample 2D model with provided X and Y and append to DataFrame.
 
     :param array: ndarray
     :param xmin: TODO
     :param ymin: TODO
-    :param step: TODO
+    :param xstep: TODO
+    :param ystep: TODO
     :param name: TODO
     :param df: dataframe
     :param xcol: TODO
@@ -1645,14 +1728,13 @@ def sample(array, xmin, ymin, step, name, df, xcol, ycol):
 
     ny, nx = array.shape
 
-    v = []
-    nsamp = len(df)
-    for isamp in range(nsamp):
-        x = df.iloc[isamp][xcol]
-        y = df.iloc[isamp][ycol]
-        iy = min(ny - int((y - ymin) / step) - 1, ny - 1)
-        ix = min(int((x - xmin) / step), nx - 1)
+    x = np.clip(np.round((df[xcol] - xmin) / xstep, 0).astype(int), 0, nx - 1)
+    y = np.clip(ny - np.round((df[ycol] - ymin) / ystep, 0).astype(int) - 1, 0, ny - 1)
+
+    v: List[float] = []
+    for iy, ix in zip(y, x):
         v.append(array[iy, ix])
+
     df[name] = v
     return df
 
@@ -1667,7 +1749,19 @@ def gkern(kernlen=21, std=3):
     return gkern2d
 
 
-def regular_sample(array, xmin, xmax, ymin, ymax, step, mx, my, nx, ny, name):
+def regular_sample(
+    array: np.ndarray,
+    xmin: float,
+    xmax: float,
+    ymin: float,
+    ymax: float,
+    step: float,
+    mx: int,
+    my: int,
+    nx: int,
+    ny: int,
+    name: str
+) -> pd.DataFrame:
     """Extract regular spaced samples from a 2D spatial model.
 
     :param array: ndarray
@@ -1683,9 +1777,9 @@ def regular_sample(array, xmin, xmax, ymin, ymax, step, mx, my, nx, ny, name):
     :param name: TODO
     :return: dataframe
     """
-    x = []
-    y = []
-    v = []
+    x: List[float] = []
+    y: List[float] = []
+    v: List[float] = []
 
     xx, yy = np.meshgrid(
         np.arange(xmin, xmax, step), np.arange(ymax, ymin, -1 * step)
@@ -1707,7 +1801,17 @@ def regular_sample(array, xmin, xmax, ymin, ymax, step, mx, my, nx, ny, name):
     return df
 
 
-def random_sample(array, xmin, xmax, ymin, ymax, step, nsamp, name):
+def random_sample(
+    array: np.ndarray,
+    xmin: float,
+    xmax: float,
+    ymin: float,
+    ymax: float,
+    xstep: float,
+    ystep: float,
+    nsamp: int,
+    name: str
+) -> pd.DataFrame:
     """Extract random samples from a 2D spatial model.
 
     :param array: ndarray
@@ -1715,17 +1819,18 @@ def random_sample(array, xmin, xmax, ymin, ymax, step, nsamp, name):
     :param xmax: TODO
     :param ymin: TODO
     :param ymax: TODO
-    :param step: TODO
+    :param xstep: TODO
+    :param ystep: TODO
     :param nsamp: TODO
     :param name: TODO
     :return: dataframe
     """
-    x = []
-    y = []
-    v = []
+    x: List[float] = []
+    y: List[float] = []
+    v: List[float] = []
 
     xx, yy = np.meshgrid(
-        np.arange(xmin, xmax, step), np.arange(ymax - 1, ymin - 1, -1 * step)
+        np.arange(xmin, xmax, xstep), np.arange(ymax - 1, ymin - 1, -1 * ystep)
     )
     ny, nx = xx.shape
 
@@ -1740,7 +1845,18 @@ def random_sample(array, xmin, xmax, ymin, ymax, step, nsamp, name):
     return df
 
 
-def DataFrame2ndarray(df, xcol, ycol, vcol, xmin, xmax, ymin, ymax, step):
+def DataFrame2ndarray(
+    df: pd.DataFrame,
+    xcol: str,
+    ycol: str,
+    vcol: str,
+    xmin: float,
+    xmax: float,
+    ymin: float,
+    ymax: float,
+    xstep: float,
+    ystep: float
+) -> np.ndarray:
     """Take spatial data from a DataFrame and make a sparse ndarray (NaN where
     no data in cell).
 
@@ -1752,11 +1868,12 @@ def DataFrame2ndarray(df, xcol, ycol, vcol, xmin, xmax, ymin, ymax, step):
     :param xmax: TODO
     :param ymin: TODO
     :param ymax: TODO
-    :param step: TODO
+    :param xstep: TODO
+    :param ystep: TODO
     :return: ndarray
     """
     xx, yy = np.meshgrid(
-        np.arange(xmin, xmax, step), np.arange(ymax - 1, ymin - 1, -1 * step)
+        np.arange(xmin, xmax, xstep), np.arange(ymax - 1, ymin - 1, -1 * ystep)
     )
     ny, nx = xx.shape
 
@@ -1764,30 +1881,31 @@ def DataFrame2ndarray(df, xcol, ycol, vcol, xmin, xmax, ymin, ymax, step):
     nsamp = len(df)
 
     for isamp in range(0, nsamp):
-        iy = min(ny - 1, ny - int((df.iloc[isamp][ycol] - ymin) / step) - 1)
-        ix = min(nx - 1, int((df.iloc[isamp][xcol] - xmin) / step))
+        iy = min(ny - 1, ny - int((df.iloc[isamp][ycol] - ymin) / xstep) - 1)
+        ix = min(nx - 1, int((df.iloc[isamp][xcol] - xmin) / ystep))
         array[iy, ix] = df.iloc[isamp][vcol]
+
     return array
 
 
 def make_variogram_3D(
-    nug,
-    nst,
-    it1,
-    cc1,
-    azi1,
-    dip1,
-    hmax1,
-    hmed1,
-    hmin1,
-    it2=1,
-    cc2=0,
-    azi2=0,
-    dip2=0,
-    hmax2=0,
-    hmed2=0,
-    hmin2=0,
-):
+    nug: float,
+    nst: int,
+    it1: int,
+    cc1: float,
+    azi1: float,
+    dip1: float,
+    hmax1: float,
+    hmed1: float,
+    hmin1: float,
+    it2: int = 1,
+    cc2: float = 0.0,
+    azi2: float = 0.0,
+    dip2: float = 0.0,
+    hmax2: float = 0.0,
+    hmed2: float = 0.0,
+    hmin2: float = 0.0,
+) -> Dict[str, float]:
     """Make a dictionary of variogram parameters for application with spatial
     estimation and simulation.
 
@@ -1857,7 +1975,22 @@ def make_variogram_3D(
     return var
 
 
-def sgsim_3D(nreal, df, xcol, ycol, zcol, vcol, nx, ny, nz, hsiz, vsiz, seed, var, output_file):
+def sgsim_3D(
+    nreal: int,
+    df: pd.DataFrame,
+    xcol: str,
+    ycol: str,
+    zcol: str,
+    vcol: str,
+    nx: int,
+    ny: int,
+    nz: int,
+    hsiz: float,
+    vsiz: float,
+    seed: float,
+    var: Dict[str, Union[float, int]],
+    output_file: str
+) -> np.ndarray:
     """Sequential Gaussian simulation, 2D wrapper for sgsim from GSLIB (.exe
     must be available in PATH or working directory).
 
@@ -1888,14 +2021,14 @@ def sgsim_3D(nreal, df, xcol, ycol, zcol, vcol, nx, ny, nz, hsiz, vsiz, seed, va
     it1 = var["it1"]
     cc1 = var["cc1"]
     azi1 = var["azi1"]
-    dip1 = var["dip1"] 
+    dip1 = var["dip1"]
     hmax1 = var["hmax1"]
     hmed1 = var["hmed1"]
     hmin1 = var["hmin1"]
     it2 = var["it2"]
     cc2 = var["cc2"]
     azi2 = var["azi2"]
-    dip2 = var["dip2"] 
+    dip2 = var["dip2"]
     hmax2 = var["hmax2"]
     hmed2 = var["hmed2"]
     hmin2 = var["hmin2"]
@@ -1934,24 +2067,25 @@ def sgsim_3D(nreal, df, xcol, ycol, zcol, vcol, nx, ny, nz, hsiz, vsiz, seed, va
         f.write("1                             -assign data to nodes (0=no, 1=yes)          \n")
         f.write("1     3                       -multiple grid search (0=no, 1=yes),num      \n")
         f.write("0                             -maximum data per octant (0=not used)        \n")
-        f.write(str(max_range) + " " + str(max_range) +" "+ str(max_range_v) + " -maximum search  (hmax,hmin,vert) \n")
+        f.write(str(max_range) + " " + str(max_range) + " " + str(max_range_v) + " -maximum search  (hmax,hmin,vert) \n")
         f.write(str(azi1) + "   0.0   0.0       -angles for search ellipsoid                 \n")
         f.write(str(hctab) + " " + str(hctab) + " 1 -size of covariance lookup table        \n")
         f.write("1     0.60   1.0              - ktype: 0=SK,1=OK,2=LVM,3=EXDR,4=COLC        \n")
         f.write("none.dat                      -  file with LVM, EXDR, or COLC variable     \n")
         f.write("4                             -  column for secondary variable             \n")
         f.write(str(nst) + " " + str(nug) + "  -nst, nugget effect                          \n")
-        f.write(str(it1) + " " + str(cc1) + " " + str(azi1) + "  " + str(dip1) +" 0.0 -it,cc,ang1,ang2,ang3\n")
-        f.write(" " + str(hmax1) + " 	" + str(hmed1) +  "		" + str(hmin1) + "  - a_hmax, a_hmin, a_vert        \n")
-        f.write(str(it2) + " " + str(cc2) + " 	" + str(azi2) + "		" + str(dip2) +" 0.0 -it,cc,ang1,ang2,ang3\n")
-        f.write(" " + str(hmax2) + " " + str(hmed2) +  " " +str(hmin2) + " - a_hmax, a_hmin, a_vert        \n")
+        f.write(str(it1) + " " + str(cc1) + " " + str(azi1) + "  " + str(dip1) + " 0.0 -it,cc,ang1,ang2,ang3\n")
+        f.write(" " + str(hmax1) + "     " + str(hmed1) + "    " + str(hmin1) + "  - a_hmax, a_hmin, a_vert        \n")
+        f.write(str(it2) + " " + str(cc2) + "     " + str(azi2) + "    " + str(dip2) + " 0.0 -it,cc,ang1,ang2,ang3\n")
+        f.write(" " + str(hmax2) + " " + str(hmed2) + " " + str(hmin2) + " - a_hmax, a_hmin, a_vert        \n")
 
     os.system("sgsim.exe sgsim.par")
     sim_array = GSLIB2ndarray_3D(output_file, 0, nreal, nx, ny, nz)
     return sim_array[0]
 
 
-def GSLIB2ndarray_3D(data_file, kcol,nreal, nx, ny, nz):
+def GSLIB2ndarray_3D(data_file: str, kcol: int, nreal: int, nx: int, ny: int, nz: int
+                     ) -> Tuple[np.ndarray, str]:
     """Convert GSLIB Geo-EAS file to a 1D or 2D numpy ndarray for use with
     Python methods
 
@@ -1963,12 +2097,13 @@ def GSLIB2ndarray_3D(data_file, kcol,nreal, nx, ny, nz):
     :param nz: shape along z dimension
     :return: ndarray, column name
     """
+    head: Union[str, List[str]]
     if nz > 1 and ny > 1:
-        array = np.ndarray(shape = (nreal, ny, nx, nz), dtype=float, order="F")
+        array = np.ndarray(shape=(nreal, ny, nx, nz), dtype=float, order="F")
     elif ny > 1:
         array = np.ndarray(shape=(nreal, ny, nx), dtype=float, order="F")
     else:
-        array = np.zeros(nreal, nx)
+        array = np.zeros((nreal, nx))
 
     with open(data_file) as f:
         head = [next(f) for _ in range(2)]  # read first two lines
@@ -1979,13 +2114,13 @@ def GSLIB2ndarray_3D(data_file, kcol,nreal, nx, ny, nz):
             head = next(f)
             if icol == kcol:
                 col_name = head.split()[0]
-        for ineal in range(nreal):		
+        for ineal in range(nreal):
             if nz > 1 and ny > 1:
                 for iz in range(nz):
                     for iy in range(ny):
                         for ix in range(nx):
                             head = next(f)
-                            array[ineal][ny - 1 - iy][ix][iz] = head.split()[kcol]    					
+                            array[ineal][ny - 1 - iy][ix][iz] = head.split()[kcol]
             elif ny > 1:
                 for iy in range(ny):
                     for ix in range(0, nx):
@@ -1995,4 +2130,5 @@ def GSLIB2ndarray_3D(data_file, kcol,nreal, nx, ny, nz):
                 for ix in range(nx):
                     head = next(f)
                     array[ineal][ix] = head.split()[kcol]
+
     return array, col_name
