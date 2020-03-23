@@ -915,16 +915,16 @@ def make_variogram(
     nug: float,
     nst: int,
     it1: int,
-    cc1: int,
+    cc1: float,
     azi1: float,
     hmaj1: float,
     hmin1: float,
     it2: int = 1,
-    cc2: int = 0,
+    cc2: float = 0,
     azi2: float = 0,
     hmaj2: float = 0,
     hmin2: float = 0,
-) -> plt.Figure:
+) -> Dict[str, Union[float, int]]:
     """Make a dictionary of variogram parameters for application with spatial
     estimation and simulation.
 
@@ -1728,14 +1728,10 @@ def sample(
 
     ny, nx = array.shape
 
-    x = np.clip(np.round((df[xcol] - xmin) / xstep, 0).astype(int), 0, nx - 1)
-    y = np.clip(ny - np.round((df[ycol] - ymin) / ystep, 0).astype(int) - 1, 0, ny - 1)
+    x = np.clip(np.round((df[xcol].values - xmin) / xstep, 0).astype(int), 0, nx - 1)
+    y = np.clip(ny - np.round((df[ycol].values - ymin) / ystep, 0).astype(int) - 1, 0, ny - 1)
+    df[name] = array[y, x]
 
-    v: List[float] = []
-    for iy, ix in zip(y, x):
-        v.append(array[iy, ix])
-
-    df[name] = v
     return df
 
 

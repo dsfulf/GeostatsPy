@@ -21,12 +21,15 @@ from bisect import bisect  # for maintaining array elements sorted
 
 import numpy as np  # for ndarrays
 import numpy.linalg as linalg  # for linear algebra
+import pandas as pd  # type: ignore
 import scipy.spatial as sp  # type: ignore  # for fast nearest neighbor search
 import numba as nb  # type: ignore  # for numerical speed up
 from numba import jit  # for numerical speed up
 from numba.extending import overload, overload_method  # type: ignore  # for numerical speed up
-from numba.typed import Dict  # type: ignore  # typing of dictionaries
+from numba.typed import Dict as nbDict  # type: ignore  # typing of dictionaries
 from statsmodels.stats.weightstats import DescrStatsW  # type: ignore
+
+from typing import Dict, List, Union
 
 JITKW = dict(nopython=True, cache=True, fastmath=True)
 JITPL = dict(parallel=False)
@@ -2632,26 +2635,26 @@ def kb2d(
 
 
 def kb2d_jit(
-    df,
-    xcol,
-    ycol,
-    vcol,
-    tmin,
-    tmax,
-    nx,
-    xmn,
-    xsiz,
-    ny,
-    ymn,
-    ysiz,
-    nxdis,
-    nydis,
-    ndmin,
-    ndmax,
-    radius,
-    ktype,
-    skmean,
-    vario,
+    df: pd.DataFrame,
+    xcol: str,
+    ycol: str,
+    vcol: str,
+    tmin: float,
+    tmax : float,
+    nx: int,
+    xmn: float,
+    xsiz : float,
+    ny: int,
+    ymn: float,
+    ysiz: float,
+    nxdis: int,
+    nydis: int,
+    ndmin: int,
+    ndmax: int,
+    radius: float,
+    ktype: int,
+    skmean: float,
+    vario: Dict[str, Union[float, int]],
 ):
     """GSLIB's KB2D program (Deutsch and Journel, 1998) converted from the
     original Fortran to Python by Michael Pyrcz, the University of Texas at
@@ -2692,26 +2695,26 @@ def kb2d_jit(
     kd_tree = sp.cKDTree(data_locs, leafsize=16, compact_nodes=True,
                          copy_data=False, balanced_tree=True)
 
-    vario_int = Dict.empty(
+    vario_int = nbDict.empty(
         key_type=nb.types.unicode_type,
         value_type=nb.types.i8
     )
 
-    vario_float = Dict.empty(
+    vario_float = nbDict.empty(
         key_type=nb.types.unicode_type,
         value_type=nb.f8
     )
 
     vario = copy(vario)
 
-    vario_float['nug'] = vario.pop('nug')
-    vario_float['cc1'] = vario.pop('cc1')
-    vario_float['cc2'] = vario.pop('cc2')
+    vario_int['nst'] = vario.pop('nst')
+    vario_int['it1'] = vario.pop('it1')
+    vario_int['it2'] = vario.pop('it2')
 
     for key in vario.keys():
-        vario_int[key] = vario[key]
+        vario_float[key] = vario[key]
 
-    tree = Dict.empty(
+    tree = nbDict.empty(
         key_type=nb.types.Tuple((nb.f8, nb.f8)),
         value_type=nb.types.Tuple((nb.f8[:], nb.i4[:]))
     )
@@ -2777,16 +2780,16 @@ def _kb2d_jit(
     c0 = vario_float['nug']
     cc[0] = vario_float['cc1']
     it[0] = vario_int['it1']
-    ang[0] = vario_int['azi1']
-    aa[0] = vario_int['hmaj1']
-    anis[0] = vario_int['hmin1'] / vario_int['hmaj1']
+    ang[0] = vario_float['azi1']
+    aa[0] = vario_float['hmaj1']
+    anis[0] = vario_float['hmin1'] / vario_float['hmaj1']
 
     if nst == 2:
         cc[1] = vario_float['cc2']
         it[1] = vario_int['it2']
-        ang[1] = vario_int['azi2']
-        aa[1] = vario_int['hmaj2']
-        anis[1] = vario_int['hmin2'] / vario_int['hmaj2']
+        ang[1] = vario_float['azi2']
+        aa[1] = vario_float['hmaj2']
+        anis[1] = vario_float['hmin2'] / vario_float['hmaj2']
 
 
 # Summary statistics for the data after trimming
@@ -2831,8 +2834,8 @@ def _kb2d_jit(
     if ndb <= 1:
         cbb = cov
     else:
-        for i in nb.prange(0, ndb):
-            for j in nb.prange(0, ndb):
+        for i in range(0, ndb):
+            for j in range(0, ndb):
                 cov = cova2(xdb[i], ydb[i], xdb[j], ydb[j], nst,
                             c0, PMX, cc, aa, it, ang, anis, rotmat, maxcov)
             if i == j:
@@ -2846,9 +2849,9 @@ def _kb2d_jit(
     ak = 0.0
     vk = 0.0
 
-    for iy in nb.prange(0, ny):
+    for iy in range(0, ny):
         yloc = ymn + (iy - 0) * ysiz
-        for ix in nb.prange(0, nx):
+        for ix in range(0, nx):
             xloc = xmn + (ix - 0) * xsiz
             current_node = (yloc, xloc)
 
